@@ -1,5 +1,6 @@
 import json
-from openai import OpenAI
+
+from openai import APIConnectionError, APIError, NotFoundError, OpenAI
 
 from config import settings
 from constitutional import judge
@@ -61,13 +62,38 @@ def _execute_tool_call(tc, user_message: str, messages: list, tool_calls_made: l
     messages.append({"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)})
 
 
+def _ollama_error_message(exc: Exception) -> str:
+    if isinstance(exc, APIConnectionError):
+        return (
+            "Cannot reach Ollama. Start it with: ollama serve "
+            "(install from https://ollama.com if needed)."
+        )
+    if isinstance(exc, NotFoundError) or (
+        isinstance(exc, APIError) and getattr(exc, "status_code", None) == 404
+    ):
+        return (
+            f"Ollama model '{settings.ollama_model}' is not installed. "
+            f"Run in a terminal: ollama pull {settings.ollama_model}"
+        )
+    if isinstance(exc, APIError):
+        return f"Ollama error: {exc}"
+    return str(exc)
+
+
 def _llm_call(messages: list):
-    return client.chat.completions.create(
-        model=settings.ollama_model,
-        messages=messages,
-        tools=TOOL_SCHEMAS,
-        tool_choice="auto",
-    )
+    try:
+        return client.chat.completions.create(
+            model=settings.ollama_model,
+            messages=messages,
+            tools=TOOL_SCHEMAS,
+            tool_choice="auto",
+        )
+    except Exception as e:
+        if type(e).__module__.startswith("openai") or isinstance(
+            e, (APIConnectionError, NotFoundError, APIError)
+        ):
+            raise RuntimeError(_ollama_error_message(e)) from e
+        raise
 
 
 def run_agent(
@@ -96,15 +122,27 @@ def run_agent(
     tool_calls_made: list = []
     judge_results: list = []
 
-    response = _llm_call(messages)
-    message = response.choices[0].message
-
-    while message.tool_calls:
-        messages.append(message)
-        for tc in message.tool_calls:
-            _execute_tool_call(tc, user_message, messages, tool_calls_made, judge_results, use_judge)
+    try:
         response = _llm_call(messages)
         message = response.choices[0].message
+
+        while message.tool_calls:
+            messages.append(message)
+            for tc in message.tool_calls:
+                _execute_tool_call(tc, user_message, messages, tool_calls_made, judge_results, use_judge)
+            response = _llm_call(messages)
+            message = response.choices[0].message
+    except (RuntimeError, NotFoundError, APIConnectionError, APIError) as e:
+        msg = str(e) if isinstance(e, RuntimeError) else _ollama_error_message(e)
+        return {
+            "response": msg,
+            "tool_calls": tool_calls_made,
+            "blocked": False,
+            "error": True,
+            "filter_result": filter_result,
+            "detector_result": detector_result,
+            "judge_results": judge_results,
+        }
 
     return {
         "response": message.content or "",

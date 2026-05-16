@@ -1,7 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+
 from core import devices, sensors
 from services.agent_service import run_agent
+from services import sensor_llm_service
+from services.simulation_bridge import simulation_summary
 
 router = APIRouter()
 
@@ -28,12 +31,45 @@ def get_devices():
 
 
 @router.get("/sensors")
-def get_sensors(inject: str | None = None):
-    readings = sensors.get_readings(inject=inject)
+def get_sensors(
+    inject: str | None = None,
+    poll: bool = Query(True, description="Poll simulation sensors and store events"),
+):
+    readings = sensors.get_readings(inject=inject, poll=poll)
     return [
         {"sensor_id": r.sensor_id, "type": r.type, "value": r.value, "unit": r.unit}
         for r in readings
     ]
+
+
+@router.get("/simulation")
+def get_simulation_summary():
+    """Unified simulation state (shared with /simulation/*)."""
+    return simulation_summary()
+
+
+class LlmManageBody(BaseModel):
+    goal: str | None = None
+    poll_sensors_first: bool = True
+    apply_plan: bool = True
+
+
+@router.post("/llm/manage")
+def gateway_llm_manage(body: LlmManageBody):
+    """Run Ollama sensor manager (same hub as devices/sensors)."""
+    try:
+        return sensor_llm_service.run_sensor_llm_cycle(
+            goal=body.goal,
+            poll_sensors_first=body.poll_sensors_first,
+            apply_plan=body.apply_plan,
+        )
+    except RuntimeError as e:
+        raise HTTPException(503, str(e)) from e
+
+
+@router.get("/llm/health")
+def gateway_llm_health():
+    return sensor_llm_service.ollama_health()
 
 
 @router.post("/command")
