@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # Ollama (local) — main agent + detector + sensor manager
     ollama_base_url: str = "http://localhost:11434/v1"
-    ollama_model: str = "llama3.2"
+    ollama_model: str = "llama3.1"
     # Native Ollama chat API; leave empty to derive from ollama_base_url
     ollama_chat_url: str = ""
     ollama_timeout_sec: float = 120.0
