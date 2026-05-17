@@ -15,22 +15,35 @@ def _blocked(reason: str, **extra) -> dict:
     return {"response": reason, "tool_calls": [], "blocked": True, **extra}
 
 
-def _apply_mitigation(user_message: str, mitigation: str) -> tuple[str, dict | None, dict | None]:
+def _text_for_mitigation_scan(user_message: str, sensor_inject: str | None) -> str:
+    """Indirect attacks hide injections in sensor data — scan that text too."""
+    parts = [user_message]
+    if sensor_inject:
+        parts.append(sensor_inject)
+    return "\n".join(parts)
+
+
+def _apply_mitigation(
+    user_message: str,
+    mitigation: str,
+    sensor_inject: str | None = None,
+) -> tuple[str, dict | None, dict | None]:
     """
     Returns (cleaned_message, filter_result, detector_result).
     Raises ValueError if the request should be blocked.
     """
     filter_result = None
     detector_result = None
+    scan_text = _text_for_mitigation_scan(user_message, sensor_inject)
 
     if mitigation == "input_filter":
-        filter_result = input_filter.filter_input(user_message)
+        filter_result = input_filter.filter_input(scan_text)
         if not filter_result["allowed"]:
             raise ValueError("input_filter")
         user_message = filter_result["cleaned"]
 
     if mitigation == "llm_detector":
-        detector_result = llm_detector.detect(user_message)
+        detector_result = llm_detector.detect(scan_text)
         if detector_result["injection"]:
             raise ValueError("llm_detector")
 
@@ -110,13 +123,19 @@ def run_agent(
     context = "\n".join(f"{r.sensor_id}: {r.value}{r.unit}" for r in sensor_data)
 
     try:
-        user_message, filter_result, detector_result = _apply_mitigation(user_message, mitigation)
+        user_message, filter_result, detector_result = _apply_mitigation(
+            user_message, mitigation, sensor_inject
+        )
     except ValueError as e:
         blocker = str(e)
+        scan_text = _text_for_mitigation_scan(user_message, sensor_inject)
         if blocker == "input_filter":
-            fr = input_filter.filter_input(user_message)
+            fr = input_filter.filter_input(scan_text)
             return _blocked("Request blocked by input filter.", filter_result=fr)
-        return _blocked("Request blocked by injection detector.", detector_result=llm_detector.detect(user_message))
+        return _blocked(
+            "Request blocked by injection detector.",
+            detector_result=llm_detector.detect(scan_text),
+        )
 
     messages = _build_messages(user_message, context, mitigation)
     tool_calls_made: list = []
