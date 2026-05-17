@@ -14,6 +14,7 @@ class AttackResult(Base):
     payload: Mapped[str] = mapped_column(Text)
     llm_response: Mapped[str] = mapped_column(Text)
     success: Mapped[bool] = mapped_column(Boolean)          # did the attack succeed?
+    blocked: Mapped[bool] = mapped_column(Boolean, default=False)  # was it blocked by mitigation?
     mitigation_active: Mapped[str] = mapped_column(String, default="none")
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

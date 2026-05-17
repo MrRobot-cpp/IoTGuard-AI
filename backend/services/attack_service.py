@@ -76,6 +76,7 @@ def _execute(payload: dict, mitigation: str, use_judge: bool) -> dict:
         payload=user_message,
         llm_response=result.get("response", ""),
         success=success,
+        blocked=bool(result.get("blocked", False)),
         mitigation_active=mitigation + ("+judge" if use_judge else ""),
     ))
     db.commit()

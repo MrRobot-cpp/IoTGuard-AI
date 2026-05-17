@@ -26,6 +26,7 @@ class DeviceStateManager:
         self._door = door
         self._alarm = alarm
         self._lights: dict[str, bool] = dict(lights or {"living_room": False, "kitchen": False, "hallway": False})
+        self._garage_locked: bool = True
         self._action_source = action_source
 
     def _record_action(self, action_type: str, payload: dict[str, Any], success: bool, error: str | None = None) -> None:
@@ -62,6 +63,14 @@ class DeviceStateManager:
         self._alarm = state
         self._record_action("set_alarm", {"from": old.value, "to": state.value}, True)
 
+    def set_garage(self, locked: bool) -> None:
+        self._garage_locked = locked
+        self._record_action("set_garage", {"locked": locked}, True)
+
+    @property
+    def garage_locked(self) -> bool:
+        return self._garage_locked
+
     def set_light(self, name: str, on: bool) -> None:
         self._lights[name] = on
         self._record_action("set_light", {"light": name, "on": on}, True)
@@ -79,6 +88,7 @@ class DeviceStateManager:
             "door": self._door.value,
             "alarm": self._alarm.value,
             "lights": dict(self._lights),
+            "garage_locked": self._garage_locked,
         }
 
     @contextmanager

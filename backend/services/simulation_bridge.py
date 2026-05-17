@@ -46,7 +46,7 @@ def get_all_devices() -> list[Device]:
         Device("light_bedroom", "Kitchen Light", "light", {"on": lights.get("kitchen", False)}),
         Device("light_hallway", "Hallway Light", "light", {"on": lights.get("hallway", False)}),
         Device("lock_front", "Front Door", "lock", _door_to_lock(door)),
-        Device("lock_garage", "Garage Lock", "lock", {"locked": True}),
+        Device("lock_garage", "Garage Lock", "lock", {"locked": snap.get("garage_locked", True)}),
         Device(
             "thermostat",
             "Main Thermostat",
@@ -75,6 +75,8 @@ def update_device_state(device_id: str, **kwargs) -> Device | None:
                 hub.devices.set_door(DoorState.CLOSED)
             elif kwargs.get("locked") is False:
                 hub.devices.set_door(DoorState.OPEN)
+        elif device_id == "lock_garage":
+            hub.devices.set_garage(bool(kwargs.get("locked", True)))
         elif device_id == "alarm":
             if kwargs.get("triggered"):
                 hub.devices.set_alarm(AlarmState.TRIGGERED)
@@ -99,6 +101,7 @@ def reset_all_devices() -> None:
     _thermostat_target_c = 21.0
     with hub.devices.action_source("gateway_agent"):
         hub.devices.set_door(DoorState.CLOSED)
+        hub.devices.set_garage(True)
         hub.devices.set_alarm(AlarmState.DISARMED)
         for name in hub.devices.get_lights():
             hub.devices.set_light(name, False)

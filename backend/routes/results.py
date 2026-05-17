@@ -23,6 +23,7 @@ def get_logs(limit: int = 50, db: Session = Depends(get_db)):
             "payload": r.payload,
             "llm_response": r.llm_response,
             "success": r.success,
+            "blocked": r.blocked,
             "mitigation_active": r.mitigation_active,
             "timestamp": r.timestamp.isoformat(),
         }

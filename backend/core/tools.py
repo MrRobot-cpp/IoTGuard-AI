@@ -94,6 +94,10 @@ TOOL_SCHEMAS = [
 
 def execute_tool(name: str, args: dict) -> dict:
     device_id = args.get("device_id", "")
+    # Guard against LLM hallucinating a nested dict instead of a plain string
+    if isinstance(device_id, dict):
+        device_id = device_id.get("device_id", next(iter(device_id.values()), ""))
+    device_id = str(device_id)
     if name == "turn_on":
         devices.update_state(device_id, on=True)
         return {"result": f"{device_id} turned on"}

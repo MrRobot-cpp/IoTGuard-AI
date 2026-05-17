@@ -21,6 +21,7 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(false);
   const [llmHealth, setLlmHealth] = useState<any>(null);
   const [llmResult, setLlmResult] = useState<any>(null);
+  const [commandError, setCommandError] = useState<string | null>(null);
 
   async function refresh() {
     const [d, s] = await Promise.all([getDevices(), getSensors()]);
@@ -35,10 +36,13 @@ export default function DevicesPage() {
 
   async function handleCommand() {
     setLoading(true);
+    setCommandError(null);
     try {
       const result = await sendCommand(command, mitigation, useJudge);
       setResponse(result);
       await refresh();
+    } catch (err) {
+      setCommandError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -161,6 +165,12 @@ export default function DevicesPage() {
             </button>
           </div>
         </div>
+
+        {commandError && (
+          <div className="mt-4 bg-red-950 border border-red-800 rounded-xl p-4">
+            <p className="text-sm text-red-300">{commandError}</p>
+          </div>
+        )}
 
         {response && (
           <div className="mt-4 bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">

@@ -72,14 +72,17 @@ def gateway_llm_health():
     return sensor_llm_service.ollama_health()
 
 
-@router.post("/command")
+@router.post("/command", responses={500: {"description": "Internal server error"}})
 def send_command(req: CommandRequest):
-    return run_agent(
-        req.message,
-        sensor_inject=req.sensor_inject,
-        mitigation=req.mitigation,
-        use_judge=req.use_judge,
-    )
+    try:
+        return run_agent(
+            req.message,
+            sensor_inject=req.sensor_inject,
+            mitigation=req.mitigation,
+            use_judge=req.use_judge,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/reset")
