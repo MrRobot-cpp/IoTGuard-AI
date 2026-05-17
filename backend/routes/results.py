@@ -41,3 +41,44 @@ def clear_logs(db: Session = Depends(get_db)):
     db.query(models.AttackResult).delete()
     db.commit()
     return {"status": "logs cleared"}
+
+
+@router.get("/alerts")
+def get_alerts(limit: int = 100, db: Session = Depends(get_db)):
+    rows = (
+        db.query(models.Alert)
+        .order_by(models.Alert.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "level": r.level,
+            "source": r.source,
+            "message": r.message,
+            "payload_id": r.payload_id,
+            "timestamp": r.timestamp.isoformat(),
+        }
+        for r in rows
+    ]
+
+
+@router.get("/device-logs")
+def get_device_logs(limit: int = 100, db: Session = Depends(get_db)):
+    rows = (
+        db.query(models.DeviceLog)
+        .order_by(models.DeviceLog.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "device_id": r.device_id,
+            "action": r.action,
+            "triggered_by": r.triggered_by,
+            "timestamp": r.timestamp.isoformat(),
+        }
+        for r in rows
+    ]

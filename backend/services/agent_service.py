@@ -5,6 +5,7 @@ from openai import APIConnectionError, APIError, NotFoundError, OpenAI
 from config import settings
 from constitutional import judge
 from core import agent as core_agent, sensors
+from core.alerts import check_and_alert
 from core.tools import TOOL_SCHEMAS, execute_tool
 from mitigations import input_filter, privilege_separation, llm_detector
 
@@ -131,11 +132,15 @@ def run_agent(
         scan_text = _text_for_mitigation_scan(user_message, sensor_inject)
         if blocker == "input_filter":
             fr = input_filter.filter_input(scan_text)
-            return _blocked("Request blocked by input filter.", filter_result=fr)
-        return _blocked(
+            result = _blocked("Request blocked by input filter.", filter_result=fr)
+            check_and_alert(result, source="input_filter")
+            return result
+        result = _blocked(
             "Request blocked by injection detector.",
             detector_result=llm_detector.detect(scan_text),
         )
+        check_and_alert(result, source="llm_detector")
+        return result
 
     messages = _build_messages(user_message, context, mitigation)
     tool_calls_made: list = []
@@ -163,7 +168,7 @@ def run_agent(
             "judge_results": judge_results,
         }
 
-    return {
+    final = {
         "response": message.content or "",
         "tool_calls": tool_calls_made,
         "blocked": False,
@@ -171,3 +176,7 @@ def run_agent(
         "detector_result": detector_result,
         "judge_results": judge_results,
     }
+    alert = check_and_alert(final, source="agent")
+    if alert:
+        final["alert"] = alert
+    return final
