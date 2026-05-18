@@ -89,3 +89,15 @@ def send_command(req: CommandRequest):
 def reset_devices():
     devices.reset_all()
     return {"status": "all devices reset to defaults"}
+
+
+class DeviceStateUpdate(BaseModel):
+    state: dict
+
+
+@router.patch("/devices/{device_id}")
+def patch_device(device_id: str, body: DeviceStateUpdate):
+    updated = devices.update_state(device_id, **body.state)
+    if updated is None:
+        raise HTTPException(status_code=404, detail=f"Device '{device_id}' not found")
+    return {"id": updated.id, "name": updated.name, "type": updated.type, "state": updated.state, "online": updated.online}

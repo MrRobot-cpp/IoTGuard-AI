@@ -8,6 +8,17 @@ interface Device {
   online: boolean;
 }
 
+// Keys where true = dangerous (red) and false = safe (green)
+const DANGER_WHEN_TRUE = new Set(["triggered", "ajar"]);
+// Keys where false = dangerous (red) and true = safe (green)
+const DANGER_WHEN_FALSE = new Set(["locked", "armed", "on", "recording"]);
+
+function boolColor(key: string, val: boolean): string {
+  if (DANGER_WHEN_TRUE.has(key)) return val ? "text-red-400" : "text-green-400";
+  if (DANGER_WHEN_FALSE.has(key)) return val ? "text-green-400" : "text-red-400";
+  return val ? "text-green-400" : "text-slate-400";
+}
+
 export default function DeviceCard({ device }: { device: Device }) {
   const stateEntries = Object.entries(device.state);
 
@@ -28,7 +39,9 @@ export default function DeviceCard({ device }: { device: Device }) {
         {stateEntries.map(([key, val]) => (
           <div key={key} className="flex justify-between text-sm">
             <span className="text-slate-400">{key}</span>
-            <span className="font-mono text-cyan-300">{String(val)}</span>
+            <span className={`font-mono font-semibold ${typeof val === "boolean" ? boolColor(key, val) : "text-cyan-300"}`}>
+              {String(val)}
+            </span>
           </div>
         ))}
       </div>

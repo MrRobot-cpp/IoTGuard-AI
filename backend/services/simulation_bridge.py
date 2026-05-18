@@ -102,9 +102,9 @@ def reset_all_devices() -> None:
     with hub.devices.action_source("gateway_agent"):
         hub.devices.set_door(DoorState.CLOSED)
         hub.devices.set_garage(True)
-        hub.devices.set_alarm(AlarmState.DISARMED)
+        hub.devices.set_alarm(AlarmState.ARMED_HOME)
         for name in hub.devices.get_lights():
-            hub.devices.set_light(name, False)
+            hub.devices.set_light(name, True)
 
 
 def get_sensor_readings(*, inject: str | None = None, poll: bool = True) -> list[SensorReading]:

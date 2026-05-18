@@ -18,14 +18,14 @@ class DeviceStateManager:
         store: EventStore | None = None,
         *,
         door: DoorState = DoorState.CLOSED,
-        alarm: AlarmState = AlarmState.DISARMED,
+        alarm: AlarmState = AlarmState.ARMED_HOME,
         lights: dict[str, bool] | None = None,
         action_source: str = "device_state_manager",
     ) -> None:
         self._store = store
         self._door = door
         self._alarm = alarm
-        self._lights: dict[str, bool] = dict(lights or {"living_room": False, "kitchen": False, "hallway": False})
+        self._lights: dict[str, bool] = dict(lights or {"living_room": True, "kitchen": True, "hallway": True})
         self._garage_locked: bool = True
         self._action_source = action_source
 

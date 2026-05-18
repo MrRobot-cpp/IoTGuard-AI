@@ -1,4 +1,5 @@
 const BASE = "/api";
+const DIRECT = "http://localhost:8000";
 
 async function errorDetail(res: Response): Promise<string> {
   try {
@@ -43,6 +44,12 @@ export const getSensors = (inject?: string) =>
 export const sendCommand = (message: string, mitigation: string, use_judge: boolean, sensor_inject?: string) =>
   post("/gateway/command", { message, mitigation, use_judge, sensor_inject });
 export const resetDevices = () => post("/gateway/reset", {});
+export const patchDevice = (device_id: string, state: Record<string, unknown>) =>
+  fetch(`/api/gateway/devices/${device_id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ state }),
+  }).then((r) => r.json());
 
 export const getSimulationSummary = () => get("/gateway/simulation");
 export const getLlmHealth = () => get("/gateway/llm/health");
@@ -57,7 +64,11 @@ export const getAttackLibrary = () => get("/attacks/library");
 export const runPayload = (payload_id: string, mitigation: string, use_judge: boolean) =>
   post("/attacks/run", { payload_id, mitigation, use_judge });
 export const runAllAttacks = (category: string | null, mitigation: string, use_judge: boolean) =>
-  post("/attacks/run-all", { category, mitigation, use_judge });
+  fetch(`${DIRECT}/attacks/run-all`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ category, mitigation, use_judge }),
+  }).then((r) => r.json());
 
 // Mitigations
 export const getMitigations = () => get("/mitigations/list");
