@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, Integer, Float, Boolean, DateTime, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,7 @@ class AttackResult(Base):
     payload: Mapped[str] = mapped_column(Text)
     llm_response: Mapped[str] = mapped_column(Text)
     success: Mapped[bool] = mapped_column(Boolean)          # did the attack succeed?
+    blocked: Mapped[bool] = mapped_column(Boolean, default=False)  # was it blocked by mitigation?
     mitigation_active: Mapped[str] = mapped_column(String, default="none")
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -26,6 +27,17 @@ class DeviceLog(Base):
     action: Mapped[str] = mapped_column(String)
     triggered_by: Mapped[str] = mapped_column(String)       # user | attack | sensor
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    level: Mapped[str] = mapped_column(String)          # info | warning | critical
+    source: Mapped[str] = mapped_column(String)         # input_filter | llm_detector | judge | agent | sensor
+    message: Mapped[str] = mapped_column(Text)
+    payload_id: Mapped[str] = mapped_column(String, default="")
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class MitigationScore(Base):

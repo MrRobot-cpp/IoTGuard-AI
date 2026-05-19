@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\ZeroSec\" && find . -maxdepth 3 -type f -name \"*.md\" ! -path \"./frontend/node_modules/*\" ! -path \"./.git/*\" | sort)",
+      "Read(//c/ZeroSec/**)"
+    ]
+  }
+}

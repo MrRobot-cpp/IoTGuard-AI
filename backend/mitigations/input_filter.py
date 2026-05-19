@@ -6,7 +6,7 @@ Blocks known injection patterns via keyword and regex matching.
 import re
 
 INJECTION_PATTERNS = [
-    r"ignore (all |previous |prior )?(instructions|rules|guidelines|constraints)",
+    r"ignore\s+(?:(?:all|previous|prior)\s+)*(?:instructions|rules|guidelines|constraints)",
     r"you are now",
     r"new (system |)prompt",
     r"\[system\]",

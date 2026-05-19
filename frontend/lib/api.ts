@@ -1,8 +1,23 @@
 const BASE = "/api";
+const DIRECT = "http://localhost:8000";
+
+async function errorDetail(res: Response): Promise<string> {
+  try {
+    const data = await res.json();
+    const d = data?.detail;
+    if (typeof d === "string") return d;
+    if (Array.isArray(d)) return d.map((x: { msg?: string }) => x.msg).filter(Boolean).join("; ");
+    if (d && typeof d === "object") return JSON.stringify(d);
+    if (data?.message) return String(data.message);
+  } catch {
+    /* ignore */
+  }
+  return String(res.status);
+}
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+  if (!res.ok) throw new Error(`GET ${path} failed: ${await errorDetail(res)}`);
   return res.json();
 }
 
@@ -12,7 +27,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
+  if (!res.ok) throw new Error(`POST ${path} failed: ${await errorDetail(res)}`);
   return res.json();
 }
 
@@ -29,13 +44,31 @@ export const getSensors = (inject?: string) =>
 export const sendCommand = (message: string, mitigation: string, use_judge: boolean, sensor_inject?: string) =>
   post("/gateway/command", { message, mitigation, use_judge, sensor_inject });
 export const resetDevices = () => post("/gateway/reset", {});
+export const patchDevice = (device_id: string, state: Record<string, unknown>) =>
+  fetch(`/api/gateway/devices/${device_id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ state }),
+  }).then((r) => r.json());
+
+export const getSimulationSummary = () => get("/gateway/simulation");
+export const getLlmHealth = () => get("/gateway/llm/health");
+export const runSensorLlmManage = (opts?: {
+  goal?: string;
+  poll_sensors_first?: boolean;
+  apply_plan?: boolean;
+}) => post("/gateway/llm/manage", opts ?? {});
 
 // Attacks
 export const getAttackLibrary = () => get("/attacks/library");
 export const runPayload = (payload_id: string, mitigation: string, use_judge: boolean) =>
   post("/attacks/run", { payload_id, mitigation, use_judge });
 export const runAllAttacks = (category: string | null, mitigation: string, use_judge: boolean) =>
-  post("/attacks/run-all", { category, mitigation, use_judge });
+  fetch(`${DIRECT}/attacks/run-all`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ category, mitigation, use_judge }),
+  }).then((r) => r.json());
 
 // Mitigations
 export const getMitigations = () => get("/mitigations/list");
